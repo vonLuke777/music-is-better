@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Vinyl disc -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24a30,30 0 1,0 0,60a30,30 0 1,0 0,-60z" />
+    <path
+        android:fillColor="#4C1D95"
+        android:pathData="M54,40a14,14 0 1,0 0,28a14,14 0 1,0 0,-28z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,48a6,6 0 1,0 0,12a6,6 0 1,0 0,-12z" />
+    <!-- Sound waves -->
+    <path
+        android:fillColor="#F97316"
+        android:pathData="M22,54 Q28,44 34,54 Q28,64 22,54z" />
+    <path
+        android:fillColor="#F97316"
+        android:pathData="M74,54 Q80,44 86,54 Q80,64 74,54z" />
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M14,54 Q20,38 26,54 Q20,70 14,54z" />
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M82,54 Q88,38 94,54 Q88,70 82,54z" />
+</vector>
