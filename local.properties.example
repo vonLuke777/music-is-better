@@ -1,0 +1,14 @@
+## Android SDK (wymagane do budowania)
+
+Skopiuj ten plik jako `local.properties` w katalogu głównym projektu
+i ustaw właściwą ścieżkę do SDK na swoim komputerze.
+
+Domyślna lokalizacja SDK na Windows (Android Studio):
+
+sdk.dir=C\:\\Users\\TWOJA_NAZWA\\AppData\\Local\\Android\\Sdk
+
+Przykład:
+
+sdk.dir=C\:\\Users\\mymeg\\AppData\\Local\\Android\\Sdk
+
+Uwaga: Android Studio zwykle tworzy ten plik automatycznie przy pierwszym otwarciu projektu.
