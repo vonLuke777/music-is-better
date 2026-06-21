@@ -21,12 +21,12 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept licenses and install SDK
+      - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Apply Gradle fixes
+      - name: Apply Gradle config
         run: |
           cat > settings.gradle.kts <<'EOF'
           pluginManagement {
@@ -36,19 +36,13 @@ jobs:
                   gradlePluginPortal()
               }
           }
-
           dependencyResolutionManagement {
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
                   google()
                   mavenCentral()
-                  maven {
-                      url = uri("http://4thline.org/m2")
-                      isAllowInsecureProtocol = true
-                  }
               }
           }
-
           rootProject.name = "MusicIsBetter"
           include(":app")
           EOF
@@ -59,11 +53,9 @@ jobs:
               id("org.jetbrains.kotlin.android")
               id("org.jetbrains.kotlin.plugin.compose")
           }
-
           android {
               namespace = "pl.speakersync"
               compileSdk = 35
-
               defaultConfig {
                   applicationId = "pl.speakersync"
                   minSdk = 29
@@ -73,30 +65,18 @@ jobs:
                   multiDexEnabled = true
                   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
               }
-
               buildTypes {
                   release {
                       isMinifyEnabled = false
-                      proguardFiles(
-                          getDefaultProguardFile("proguard-android-optimize.txt"),
-                          "proguard-rules.pro"
-                      )
+                      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
                   }
               }
-
               compileOptions {
                   sourceCompatibility = JavaVersion.VERSION_17
                   targetCompatibility = JavaVersion.VERSION_17
               }
-
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-
-              buildFeatures {
-                  compose = true
-              }
-
+              kotlinOptions { jvmTarget = "17" }
+              buildFeatures { compose = true }
               packaging {
                   resources {
                       excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -109,12 +89,10 @@ jobs:
                   }
               }
           }
-
           dependencies {
               val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
               implementation(composeBom)
               androidTestImplementation(composeBom)
-
               implementation("androidx.core:core-ktx:1.15.0")
               implementation("androidx.multidex:multidex:2.0.1")
               implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
@@ -122,35 +100,50 @@ jobs:
               implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
               implementation("androidx.activity:activity-compose:1.9.3")
               implementation("androidx.navigation:navigation-compose:2.8.4")
-
               implementation("androidx.compose.ui:ui")
               implementation("androidx.compose.ui:ui-tooling-preview")
               implementation("androidx.compose.material3:material3")
               implementation("androidx.compose.material:material-icons-extended")
               implementation("androidx.mediarouter:mediarouter:1.7.0")
-
               implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
-
               implementation("org.eclipse.jetty:jetty-server:8.1.22.v20160922")
               implementation("org.eclipse.jetty:jetty-servlet:8.1.22.v20160922")
               implementation("org.eclipse.jetty:jetty-client:8.1.22.v20160922")
               implementation("org.slf4j:slf4j-android:1.7.36")
               implementation("org.nanohttpd:nanohttpd:2.3.1")
               implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-
               debugImplementation("androidx.compose.ui:ui-tooling")
               debugImplementation("androidx.compose.ui:ui-test-manifest")
           }
           EOF
 
-      - name: Fix Kotlin compile errors in repo
+      - name: Fix ALL known Kotlin compile errors
         run: |
+          # 1) AppContainer — brakujacy import NowPlayingRepository
+          if ! grep -q 'import pl.speakersync.media.NowPlayingRepository' app/src/main/java/pl/speakersync/AppContainer.kt; then
+            sed -i '/import pl.speakersync.grouping.GroupManager/a import pl.speakersync.media.NowPlayingRepository' app/src/main/java/pl/speakersync/AppContainer.kt
+          fi
+
+          # 2) DlnaDiscoverySource — descriptorURL nie istnieje
           sed -i 's/device.identity.descriptorURL?.host ?: device.displayString/device.displayString/g' app/src/main/java/pl/speakersync/discovery/DlnaDiscoverySource.kt
-          sed -i 's/ProtocolInfo("http-get", item.mimeType, "*")/ProtocolInfo("http-get", "*", item.mimeType, "*")/g' app/src/main/java/pl/speakersync/playback/RemotePlaybackManagers.kt
+
+          # 3) AmplifierHero — Color.copy(0.5f) zamiast copy(alpha = 0.5f)
+          sed -i 's/Color\.White\.copy(0\.5f)/Color.White.copy(alpha = 0.5f)/g' app/src/main/java/pl/speakersync/ui/components/AmplifierHero.kt
+          sed -i 's/IndicatorGreen\.copy(0\.85f)/IndicatorGreen.copy(alpha = 0.85f)/g' app/src/main/java/pl/speakersync/ui/components/AmplifierHero.kt
+
+          # 4) RemotePlaybackManagers — Bluetooth routing
           sed -i 's/it.id == routeId || it.description == speaker.address/it.id == routeId || it.name == speaker.name/g' app/src/main/java/pl/speakersync/playback/RemotePlaybackManagers.kt
           sed -i '/?: router.routes.find { it.name == speaker.name }/d' app/src/main/java/pl/speakersync/playback/RemotePlaybackManagers.kt
 
-      - name: Download Cling (DLNA) libraries
+          # 5) ProtocolInfo — jesli wystepuje stara wersja
+          sed -i 's/ProtocolInfo("http-get", item.mimeType, "*")/ProtocolInfo("http-get", "*", item.mimeType, "*")/g' app/src/main/java/pl/speakersync/playback/RemotePlaybackManagers.kt
+
+          echo "=== Sprawdzenie napraw ==="
+          grep -n "NowPlayingRepository" app/src/main/java/pl/speakersync/AppContainer.kt || true
+          grep -n "descriptorURL" app/src/main/java/pl/speakersync/discovery/DlnaDiscoverySource.kt && exit 1 || echo "DlnaDiscoverySource OK"
+          grep -n "Color.White.copy(0" app/src/main/java/pl/speakersync/ui/components/AmplifierHero.kt && exit 1 || echo "AmplifierHero OK"
+
+      - name: Download Cling libraries
         run: |
           mkdir -p app/libs
           BASE=http://4thline.org/m2
@@ -176,31 +169,22 @@ jobs:
 
       - name: Show build errors
         if: failure()
-        run: tail -n 80 build.log
+        run: |
+          echo "=== Kotlin errors ==="
+          grep -E "^e: file:" build.log || true
+          echo "=== Last 80 lines ==="
+          tail -n 80 build.log
 
-      - name: Rename APK for easy download
+      - name: Rename APK
         if: success()
         run: cp app/build/outputs/apk/debug/app-debug.apk music-is-better.apk
 
-      - name: Publish APK to Releases (no ZIP)
+      - name: Publish APK to Releases
         if: success()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-v${{ github.run_number }}
           name: Music is Better APK #${{ github.run_number }}
-          body: |
-            Gotowy plik APK aplikacji **Music is Better**.
-
-            1. Pobierz plik **music-is-better.apk** (bez rozpakowywania)
-            2. Wyślij na Samsung i zainstaluj
-            3. Szukaj ikony **Music is Better** na telefonie
+          body: Pobierz music-is-better.apk i zainstaluj na Samsungu.
           files: music-is-better.apk
           make_latest: true
-
-      - name: Upload APK artifact (backup)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: music-is-better-apk
-          path: music-is-better.apk
-          retention-days: 30
