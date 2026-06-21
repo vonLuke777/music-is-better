@@ -22,7 +22,16 @@ jobs:
         run: |
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
+      - name: Download Cling (DLNA) libraries
+        run: |
+          mkdir -p app/libs
+          BASE=http://4thline.org/m2
+          curl -fsSL "${BASE}/org/fourthline/cling/cling-core/2.1.2/cling-core-2.1.2.jar" -o app/libs/cling-core-2.1.2.jar
+          curl -fsSL "${BASE}/org/fourthline/cling/cling-support/2.1.2/cling-support-2.1.2.jar" -o app/libs/cling-support-2.1.2.jar
+          curl -fsSL "${BASE}/org/seamless/seamless-util/1.1.2/seamless-util-1.1.2.jar" -o app/libs/seamless-util-1.1.2.jar
+          curl -fsSL "${BASE}/org/seamless/seamless-http/1.1.2/seamless-http-1.1.2.jar" -o app/libs/seamless-http-1.1.2.jar
+          curl -fsSL "${BASE}/org/seamless/seamless-xml/1.1.2/seamless-xml-1.1.2.jar" -o app/libs/seamless-xml-1.1.2.jar
+          ls -la app/libs
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
