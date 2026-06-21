@@ -50,8 +50,7 @@ class MediaNotificationListener : NotificationListenerService() {
 
             active?.registerCallback(callback)
 
-            if (active?.metadata != null) {
-                val metadata = active.metadata
+            active?.metadata?.let { metadata ->
                 val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
                 val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
                     ?: metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
@@ -60,7 +59,7 @@ class MediaNotificationListener : NotificationListenerService() {
 
                 if (title.isNotBlank()) {
                     repository.update(NowPlayingInfo(title = title, artist = artist))
-                    return
+                    return@runCatching
                 }
             }
 
