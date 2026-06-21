@@ -3,6 +3,9 @@ name: Build APK
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,6 +25,7 @@ jobs:
         run: |
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
       - name: Download Cling (DLNA) libraries
         run: |
           mkdir -p app/libs
@@ -32,6 +36,7 @@ jobs:
           curl -fsSL "${BASE}/org/seamless/seamless-http/1.1.2/seamless-http-1.1.2.jar" -o app/libs/seamless-http-1.1.2.jar
           curl -fsSL "${BASE}/org/seamless/seamless-xml/1.1.2/seamless-xml-1.1.2.jar" -o app/libs/seamless-xml-1.1.2.jar
           ls -la app/libs
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -41,11 +46,28 @@ jobs:
         run: gradle wrapper --gradle-version 8.9
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK
+      - name: Rename APK for easy download
+        run: cp app/build/outputs/apk/debug/app-debug.apk music-is-better.apk
+
+      - name: Publish APK to Releases (no ZIP)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-v${{ github.run_number }}
+          name: Music is Better APK #${{ github.run_number }}
+          body: |
+            Gotowy plik APK aplikacji **Music is Better**.
+
+            1. Pobierz plik **music-is-better.apk** (bez rozpakowywania)
+            2. Wyślij na Samsung i zainstaluj
+            3. Szukaj ikony **Music is Better** na telefonie
+          files: music-is-better.apk
+          make_latest: true
+
+      - name: Upload APK artifact (backup)
         uses: actions/upload-artifact@v4
         with:
-          name: MusicIsBetter-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: music-is-better-apk
+          path: music-is-better.apk
           retention-days: 30
