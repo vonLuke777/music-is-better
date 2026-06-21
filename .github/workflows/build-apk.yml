@@ -145,7 +145,10 @@ jobs:
 
       - name: Fix Kotlin compile errors in repo
         run: |
+          sed -i 's/device.identity.descriptorURL?.host ?: device.displayString/device.displayString/g' app/src/main/java/pl/speakersync/discovery/DlnaDiscoverySource.kt
           sed -i 's/ProtocolInfo("http-get", item.mimeType, "*")/ProtocolInfo("http-get", "*", item.mimeType, "*")/g' app/src/main/java/pl/speakersync/playback/RemotePlaybackManagers.kt
+          sed -i 's/it.id == routeId || it.description == speaker.address/it.id == routeId || it.name == speaker.name/g' app/src/main/java/pl/speakersync/playback/RemotePlaybackManagers.kt
+          sed -i '/?: router.routes.find { it.name == speaker.name }/d' app/src/main/java/pl/speakersync/playback/RemotePlaybackManagers.kt
 
       - name: Download Cling (DLNA) libraries
         run: |
@@ -167,12 +170,20 @@ jobs:
         run: gradle wrapper --gradle-version 8.9
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+
+      - name: Show build errors
+        if: failure()
+        run: tail -n 80 build.log
 
       - name: Rename APK for easy download
+        if: success()
         run: cp app/build/outputs/apk/debug/app-debug.apk music-is-better.apk
 
       - name: Publish APK to Releases (no ZIP)
+        if: success()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-v${{ github.run_number }}
@@ -187,6 +198,7 @@ jobs:
           make_latest: true
 
       - name: Upload APK artifact (backup)
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: music-is-better-apk
