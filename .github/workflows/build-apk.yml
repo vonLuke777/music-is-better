@@ -143,6 +143,10 @@ jobs:
           }
           EOF
 
+      - name: Fix Kotlin compile errors in repo
+        run: |
+          sed -i 's/ProtocolInfo("http-get", item.mimeType, "*")/ProtocolInfo("http-get", "*", item.mimeType, "*")/g' app/src/main/java/pl/speakersync/playback/RemotePlaybackManagers.kt
+
       - name: Download Cling (DLNA) libraries
         run: |
           mkdir -p app/libs
